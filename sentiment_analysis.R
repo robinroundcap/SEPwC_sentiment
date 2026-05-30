@@ -45,32 +45,42 @@ word_analysis<-function(toot_data, emotion) {
 }
 
 sentiment_analysis <- function(toot_data) {
+  # unnest_tokens automatically forces lowercase and strips punctuation
   toot_words <- toot_data %>%
     select(id, created_at, content) %>%
     unnest_tokens(word, content)
   
+  # BING Lexicon Analysis
   bing_df <- toot_words %>%
-    inner_join(get_sentiments("bing"), by = "word") %>%
+    inner_join(get_sentiments("bing"), by = "word", relationship = "many-to-many") %>%
+    # Converts binary positive/negative text strings into numbers (+1 / -1)
     mutate(score = if_else(sentiment == "positive", 1, -1)) %>%
     group_by(id, created_at) %>%
     summarise(sentiment = sum(score), .groups = "drop") %>%
+    # Tracking column lets us separate methods later on the plot axis
     mutate(method = "bing")
   
+  # AFINN Lexicon Analysis
   afinn_df <- toot_words %>%
-    inner_join(get_sentiments("afinn"), by = "word") %>%
+    inner_join(get_sentiments("afinn"), by = "word", relationship = "many-to-many") %>%
     group_by(id, created_at) %>%
+    # Sums up pre-existing numeric weights natively stored in the 'value' column
     summarise(sentiment = sum(value), .groups = "drop") %>%
     mutate(method = "afinn")
   
+  # NRC Lexicon Analysis
   nrc_df <- toot_words %>%
-    inner_join(get_sentiments("nrc"), by = "word") %>%
+    inner_join(get_sentiments("nrc"), by = "word", relationship = "many-to-many") %>%
+    # Filters out specific emotional tracking to isolate net sentiment coordinates
     filter(sentiment %in% c("positive", "negative")) %>%
     mutate(score = if_else(sentiment == "positive", 1, -1)) %>%
     group_by(id, created_at) %>%
     summarise(sentiment = sum(score), .groups = "drop") %>%
     mutate(method = "nrc")
-
+  
+  # Stacks data frames vertically into long-format matching ggplot2 grouping
   combined_sentiment <- bind_rows(afinn_df, nrc_df, bing_df)
+  
   return(combined_sentiment)
 }
 
