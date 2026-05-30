@@ -11,26 +11,18 @@ suppressPackageStartupMessages({
 
 
 load_data <- function(filename) {
-  # 1. Read the raw CSV file
-  # stringsAsFactors = FALSE ensures text columns stay as characters
-  df <- read.csv(filename, stringsAsFactors = FALSE)
+  # Force R to read the 'id' column as a character string right away, 
+  # preventing any accidental conversions to scientific notation
+  df <- read.csv(filename, colClasses = c("id" = "character"), stringsAsFactors = FALSE)
   
-  # 2. Filter out non-English toots
-  # The test expects ALL remaining rows to have language == "en"
+  # Filter out non-English rows
   df <- df[df$language == "en" & !is.na(df$language), ]
   
-  # 3. Clean HTML tags from the content column
-  # Uses the exact regex pattern provided in the assignment description
+  # Strip HTML tags
   df$content <- gsub("<[^>]+>", "", df$content)
   
-  # 4. Parse the created_at column into a formal datetime object
-  # Mastodon dates usually look like "2024-02-22T14:30:00.000Z"
-  # ymd_hms() automatically converts this string and satisfies is.timepoint()
+  # Parse datetime objects using lubridate
   df$created_at <- lubridate::ymd_hms(df$created_at)
-  
-  # 5. Explicitly force the id column to be a character class
-  # This avoids R converting long IDs into scientific notation (which corrupts them)
-  df$id <- as.character(df$id)
   
   return(df)
 }
