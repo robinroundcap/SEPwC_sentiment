@@ -36,28 +36,19 @@ load_data <- function(filename) {
 }
 
 word_analysis<-function(toot_data, emotion) {
-  # 1. Get the NRC dictionary and filter for the specific emotion requested
+  target_emotion <- as.character(emotion)
+  
   emotion_dict <- get_sentiments("nrc") %>%
-  filter(sentiment == emotion)
+    filter(sentiment == target_emotion)
   
-  # 2. Process the text data
   word_data <- toot_data %>%
-  # Select only the columns we need to track
-  select(id, created_at, content) %>%
-    
-  # Break the sentences down into individual words
-  unnest_tokens(word, content) %>%
+    select(id, created_at, content) %>%
+    unnest_tokens(word, content) %>%
+    inner_join(emotion_dict, by = "word") %>%
+    count(id, created_at, sentiment, word, sort = TRUE) %>%
+    head(10)
   
-  # Match the words against our emotion dictionary (drops non-matching words)
-  inner_join(emotion_dict, by = "word") %>%
-    
-  # Count the occurrences while keeping id, created_at, and sentiment columns
-  # sort = TRUE automatically sorts the 'n' column in decreasing order
-  count(id, created_at, sentiment, word, sort = TRUE) %>%
-  
-  # Keep only the top 10 rows
-  head(10)
-    return()
+  return(word_data)
   
 }
 
