@@ -52,10 +52,34 @@ word_analysis<-function(toot_data, emotion) {
   
 }
 
-sentiment_analysis<-function(toot_data) {
-
-    return()
-
+sentiment_analysis <- function(toot_data) {
+  toot_words <- toot_data %>%
+    select(id, created_at, content) %>%
+    unnest_tokens(word, content)
+  
+  bing_df <- toot_words %>%
+    inner_join(get_sentiments("bing"), by = "word") %>%
+    mutate(score = if_else(sentiment == "positive", 1, -1)) %>%
+    group_by(id, created_at) %>%
+    summarise(sentiment = sum(score), .groups = "drop") %>%
+    mutate(method = "bing")
+  
+  afinn_df <- toot_words %>%
+    inner_join(get_sentiments("afinn"), by = "word") %>%
+    group_by(id, created_at) %>%
+    summarise(sentiment = sum(value), .groups = "drop") %>%
+    mutate(method = "afinn")
+  
+  nrc_df <- toot_words %>%
+    inner_join(get_sentiments("nrc"), by = "word") %>%
+    filter(sentiment %in% c("positive", "negative")) %>%
+    mutate(score = if_else(sentiment == "positive", 1, -1)) %>%
+    group_by(id, created_at) %>%
+    summarise(sentiment = sum(score), .groups = "drop") %>%
+    mutate(method = "nrc")
+  
+  combined_sentiment <- bind_rows(afinn_df, nrc_df, bing_df)
+  return(combined_sentiment)
 }
 
 main <- function(args) {
