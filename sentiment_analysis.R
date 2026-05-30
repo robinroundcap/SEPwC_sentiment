@@ -77,7 +77,7 @@ sentiment_analysis <- function(toot_data) {
     group_by(id, created_at) %>%
     summarise(sentiment = sum(score), .groups = "drop") %>%
     mutate(method = "nrc")
-  
+
   combined_sentiment <- bind_rows(afinn_df, nrc_df, bing_df)
   return(combined_sentiment)
 }
@@ -108,3 +108,5 @@ if(sys.nframe() == 0) {
   args = parser$parse_args()  
   main(args)
 }
+
+# Copyright 2026 by Robin Tattersall. GPL-3
